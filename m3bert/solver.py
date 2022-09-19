@@ -22,8 +22,8 @@ from tqdm import tqdm, trange
 import torch.nn.functional as F
 from tensorboardX import SummaryWriter
 from dataloader import get_Dataloader
-from mockingjay.model import MockingjayConfig, MockingjayModel, MockingjayForMaskedAcousticModel
-from mockingjay.optimization import BertAdam, WarmupLinearSchedule
+from m3bert.model import M3BERTConfig, M3BERTModel, M3BERTForMaskedAcousticModel
+from m3bert.optimization import BertAdam, WarmupLinearSchedule
 from utility.audio import plot_spectrogram_to_numpy, plot_spectrogram, plot_embedding
 from utility.audio import mel_dim, num_freq, fmllr_dim, sample_rate, inv_spectrogram
 import traceback
@@ -91,35 +91,35 @@ class Solver():
 
         if self.duo_feature and not load_mel_only:
             setattr(self, 'dataloader', get_Dataloader(split, load='duo', use_gpu=self.paras.gpu, \
-                    mock_config=self.config['mockingjay'], **self.config['dataloader'])) # Currently the duo feature dataloader only supports mockingjay training, no need to specify `run_mockingjay`
+                    mock_config=self.config['m3bert'], **self.config['dataloader'])) # Currently the duo feature dataloader only supports m3bert training, no need to specify `run_mockingjay`
         else:
             #xxx
             setattr(self, 'dataloader', get_Dataloader(split, load='spec', use_gpu=self.paras.gpu, \
-                    run_mockingjay=True if not load_mel_only else False, mock_config=self.config['mockingjay'], \
-                    **self.config['dataloader'])) # specify `run_mockingjay` so dataloader will process mockingjay MAM data
+                    run_m3bert=True if not load_mel_only else False, mock_config=self.config['m3bert'], \
+                    **self.config['dataloader'])) # specify `run_m3bert` so dataloader will process m3bert MAM data
 
 
     def set_model(self, inference=False, with_head=False, from_path=None, output_attention=False):
-        self.verbose('Initializing Mockingjay model.')
+        self.verbose('Initializing M3BERT model.')
 
-        # Build the Mockingjay model with speech prediction head
-        self.model_config = MockingjayConfig(self.config)
+        # Build the M3BERT model with speech prediction head
+        self.model_config = M3BERTConfig(self.config)
         self.dr = self.model_config.downsample_rate
         self.hidden_size = self.model_config.hidden_size
         self.output_attention = output_attention
         
         if not inference or with_head:
-            self.model = MockingjayForMaskedAcousticModel(self.model_config, self.input_dim, self.output_dim, self.output_attention).to(self.device)
+            self.model = M3BERTForMaskedAcousticModel(self.model_config, self.input_dim, self.output_dim, self.output_attention).to(self.device)
             self.verbose('Number of parameters: ' + str(sum(p.numel() for p in self.model.parameters() if p.requires_grad)))
-            self.mockingjay = self.model.Mockingjay.to(self.device)
+            self.m3bert = self.model.M3BERT.to(self.device)
             #self.model = torch.nn.DataParallel(self.model)
 
 
 
         if inference and not with_head:
-            self.mockingjay = MockingjayModel(self.model_config, self.input_dim, self.output_attention).to(self.device)
-            self.verbose('Number of parameters: ' + str(sum(p.numel() for p in self.mockingjay.parameters() if p.requires_grad)))
-            self.mockingjay.eval()
+            self.m3bert = M3BERTModel(self.model_config, self.input_dim, self.output_attention).to(self.device)
+            self.verbose('Number of parameters: ' + str(sum(p.numel() for p in self.m3bert.parameters() if p.requires_grad)))
+            self.m3bert.eval()
         elif inference and with_head:
             self.model.eval()
         elif not inference:
@@ -174,7 +174,7 @@ class Solver():
         if model_all:
             all_states = {
                 'SpecHead': self.model.module.SpecHead.state_dict(),
-                'Mockingjay': self.mockingjay.state_dict(),
+                'M3BERT': self.m3bert.state_dict(),
                 'Optimizer': self.optimizer.state_dict(),
                 'Global_step': self.global_step,
                 'Settings': {
@@ -184,7 +184,7 @@ class Solver():
             }
         else:
             all_states = {
-                'Mockingjay': self.mockingjay.state_dict(),
+                'M3BERT': self.m3bert.state_dict(),
                 'Settings': {
                     'Config': self.config,
                     'Paras': self.paras,
@@ -203,7 +203,7 @@ class Solver():
         if from_path is not None:
             self.verbose('Load model from {}'.format(from_path))
             all_states = torch.load(from_path, map_location='cpu')
-            self.load_model_list = ['Mockingjay']
+            self.load_model_list = ['M3BERT']
             #Import a new learning if it is available!
             try:
                 lr = all_states['Optimizer']['param_groups'][0]['lr']
@@ -232,9 +232,9 @@ class Solver():
                     self.model.SpecHead.load_state_dict(all_states['SpecHead'])
                     self.verbose('[SpecHead] - Loaded')
                 except: self.verbose('[SpecHead - X]')
-        if 'Mockingjay' in self.load_model_list:
+        if 'M3BERT' in self.load_model_list:
             try:
-                state_dict = all_states['Mockingjay']
+                state_dict = all_states['M3BERT']
                 # Load from a PyTorch state_dict
                 old_keys = []
                 new_keys = []
@@ -267,18 +267,18 @@ class Solver():
                         if child is not None:
                             load(child, prefix + name + '.')
 
-                load(self.mockingjay)
+                load(self.m3bert)
                 if len(missing_keys) > 0:
                     self.verbose("Weights of {} not initialized from pretrained model: {}".format(
-                        self.mockingjay.__class__.__name__, missing_keys))
+                        self.m3bert.__class__.__name__, missing_keys))
                 if len(unexpected_keys) > 0:
                     self.verbose("Weights from pretrained model not used in {}: {}".format(
-                        self.mockingjay.__class__.__name__, unexpected_keys))
+                        self.m3berty.__class__.__name__, unexpected_keys))
                 if len(error_msgs) > 0:
                     raise RuntimeError('Error(s) in loading state_dict for {}:\n\t{}'.format(
-                                       self.mockingjay.__class__.__name__, "\n\t".join(error_msgs)))
-                self.verbose('[Mockingjay] - Loaded')
-            except: self.verbose('[Mockingjay - X]')
+                                       self.m3bert.__class__.__name__, "\n\t".join(error_msgs)))
+                self.verbose('[M3BERT] - Loaded')
+            except: self.verbose('[M3BERT - X]')
         if 'Optimizer' in self.load_model_list and not inference:
             try:
                 self.optimizer.load_state_dict(all_states['Optimizer'])
@@ -395,7 +395,7 @@ class Trainer(Solver):
 
 
     def exec(self):
-        ''' Training Unsupervised End-to-end Mockingjay Model'''
+        ''' Training Unsupervised End-to-end M3BERT Model'''
         self.verbose('Training set total ' + str(len(self.dataloader)) + ' batches.')
         #TODO: Remove this?
         self.model = torch.nn.DataParallel(self.model)
@@ -482,7 +482,7 @@ class Trainer(Solver):
 
                     if self.global_step % self.save_step == 0:
                         #print(spec_masked[0])
-                        self.save_model('mockingjay')
+                        self.save_model('m3bert')
                         mask_spec = self.up_sample_frames(spec_masked[0], return_first=True)
                         pred_spec = self.up_sample_frames(pred_spec[0], return_first=True)
                         true_spec = self.up_sample_frames(spec_stacked[0], return_first=True)
@@ -571,7 +571,7 @@ class Tester(Solver):
 
     def tile_representations(self, reps):
         """ 
-            Tile up the mockingjay representations to match the amount of input frames.
+            Tile up the m3bert representations to match the amount of input frames.
             Input - encoded_layers shape: (num_hidden_layers, batch_size, sequence_length, hidden_size)
             Output - tiled_encoded_layers shape: (num_hidden_layers, batch_size, sequence_length * downsample_rate, hidden_size)
         """
@@ -591,7 +591,7 @@ class Tester(Solver):
 
 
     def plot(self, with_head=False):
-        ''' Plotting the visualizations of the Unsupervised End-to-end Mockingjay Model'''
+        ''' Plotting the visualizations of the Unsupervised End-to-end M3BERT Model'''
         self.verbose('Testing set total ' + str(len(self.dataloader)) + ' batches.')
         if not os.path.exists(self.dump_dir): os.makedirs(self.dump_dir)
         with torch.no_grad():
@@ -610,7 +610,7 @@ class Tester(Solver):
                     spec_masked = copy.deepcopy(spec_stacked)
                     #TODO: this is randomly sampling 15%, regardless of length
                     for i in range(len(spec_masked)):
-                        sample_index = random.sample(range(len(spec_masked[i])), int(len(spec_masked[i])*self.config['mockingjay']['mask_proportion']))
+                        sample_index = random.sample(range(len(spec_masked[i])), int(len(spec_masked[i])*self.config['m3bert']['mask_proportion']))
                         #print(spec_masked.shape)
                         spec_masked[i][sample_index] = 0
                         #TODO: Masking features
@@ -644,7 +644,7 @@ class Tester(Solver):
                             self.verbose('Spectrogram head generated samples are saved to: {}'.format(self.dump_dir))
                             exit() # visualize the first 10 testing samples
                 elif self.output_attention:
-                    all_attentions, _ = self.mockingjay(spec_stacked, pos_enc, attention_mask=attn_mask, output_all_encoded_layers=True)
+                    all_attentions, _ = self.m3bert(spec_stacked, pos_enc, attention_mask=attn_mask, output_all_encoded_layers=True)
                     all_attentions = torch.stack(all_attentions).transpose(0, 1)
                     # all_attentions: (batch_size, num_layer, num_head, Q_seq_len, K_seq_len)
 
@@ -655,7 +655,7 @@ class Tester(Solver):
                             self.verbose(f'Attention samples are saved to {self.dump_dir}')
                             exit()
                 else:
-                    encoded_layers = self.mockingjay(spec_stacked, pos_enc, attention_mask=attn_mask, output_all_encoded_layers=True)
+                    encoded_layers = self.m3bert(spec_stacked, pos_enc, attention_mask=attn_mask, output_all_encoded_layers=True)
                     encoded_layers = torch.stack(encoded_layers)
 
                     layer_num = encoded_layers.size(0)
@@ -682,13 +682,13 @@ class Tester(Solver):
 
                     idx += batch_size
                     if idx >= 10:
-                        self.verbose('Mockingjay generated samples are saved to: {}'.format(self.dump_dir))
+                        self.verbose('M3BERT generated samples are saved to: {}'.format(self.dump_dir))
                         break # visualize the first 10 testing samples
 
 
     def forward(self, spec, all_layers=True, tile=True, process_from_loader=False):
         """ 
-            Generation of the Mockingjay Model Representation
+            Generation of the M3BERT Model Representation
             Input: A batch of spectrograms: (batch_size, seq_len, hidden_size)
             If `all_layers` == True:
                 if `tile`: Output - A batch of representations: (batch_size, num_hiddem_layers, seq_len, hidden_size)
@@ -704,7 +704,7 @@ class Tester(Solver):
                 spec_stacked, pos_enc, attn_mask = self.process_MAM_data(spec=spec)
             else:
                 spec_stacked, pos_enc, attn_mask = self.process_data(spec=spec) # Use dataloader to process MAM data to increase speed
-            reps = self.mockingjay(spec_stacked, pos_enc, attention_mask=attn_mask, output_all_encoded_layers=all_layers)
+            reps = self.m3bert(spec_stacked, pos_enc, attention_mask=attn_mask, output_all_encoded_layers=all_layers)
 
             if type(reps) is list:
                 reps = torch.stack(reps)
@@ -743,7 +743,7 @@ class Tester(Solver):
 
     def forward_fine_tune(self, spec, tile=True, process_from_loader=False):
         """ 
-            Fine tune the Mockingjay Model on downstream tasks
+            Fine tune the M3BERT Model on downstream tasks
             Input: A batch of spectrograms: (batch_size, seq_len, hidden_size)
             Output - A batch of representations: (batch_size, seq_len, hidden_size)
             where `seq_len` is the sequence length of the input `spec`.
@@ -753,7 +753,7 @@ class Tester(Solver):
             spec_stacked, pos_enc, attn_mask = self.process_MAM_data(spec=spec)
         else:
             spec_stacked, pos_enc, attn_mask = self.process_data(spec=spec) # Use dataloader to process MAM data to increase speed
-        reps = self.mockingjay(spec_stacked, pos_enc, attention_mask=attn_mask, output_all_encoded_layers=False)
+        reps = self.m3bert(spec_stacked, pos_enc, attention_mask=attn_mask, output_all_encoded_layers=False)
         # reps: (batch_size, seq_len // downsample_rate, hidden_size)
 
         # tile representations to match the input `seq_len` of `spec`
