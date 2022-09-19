@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*- #
 """*********************************************************************************************"""
-#   FileName     [ mockingjay/solver.py ]
-#   Synopsis     [ solvers for the mockingjay model: trainer / tester ]
-#   Author       [ Andy T. Liu (Andi611) ]
-#   Copyright    [ Copyleft(c), Speech Lab, NTU, Taiwan ]
+#   FileName     [ m3bert/solver.py ]
+#   Synopsis     [ solvers for the m3bert model: trainer / tester ]
+#   Author       [ Timothy D. Greer (timothydgreer) ]
+#   Copyright    [ Copyright(c), SAIL Lab, USC, USA ]
 """*********************************************************************************************"""
 
 
