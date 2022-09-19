@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*- #
 """*********************************************************************************************"""
-#   FileName     [ runner_mockingjay.py ]
-#   Synopsis     [ runner for the mockingjay model ]
-#   Author       [ Andy T. Liu (Andi611) ]
-#   Copyright    [ Copyleft(c), Speech Lab, NTU, Taiwan ]
+#   FileName     [ runner_m3bert.py ]
+#   Synopsis     [ runner for the m3bert model ]
+#   Author       [ Timothy D. Greer (timothydgreer) ]
+#   Copyright    [ Copyleft(c), SAIL Lab, USC, USA ]
 """*********************************************************************************************"""
 
 
