@@ -77,7 +77,7 @@ ACT2FN = {"gelu": gelu, "relu": torch.nn.functional.relu, "swish": swish}
 
 
 try:
-    from apex.normalization.fused_layer_norm import FusedLayerNorm as MockingjayLayerNorm
+    from apex.normalization.fused_layer_norm import FusedLayerNorm as M3BERTLayerNorm
 except ImportError:
     print("Better speed can be achieved with apex installed from https://www.github.com/nvidia/apex .")
     class M3BERTLayerNorm(nn.Module):
@@ -156,7 +156,7 @@ class M3BERTSelfAttention(nn.Module):
         # Take the dot product between "query" and "key" to get the raw attention scores.
         attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
-        # Apply the attention mask is (precomputed for all layers in MockingjayModel forward() function)
+        # Apply the attention mask is (precomputed for all layers in M3BERTModel forward() function)
         attention_scores = attention_scores + attention_mask
 
         # Normalize the attention scores to probabilities.
@@ -339,7 +339,7 @@ class M3BERTInitModel(nn.Module):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
             module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-        elif isinstance(module, MockingjayLayerNorm):
+        elif isinstance(module, M3BERTLayerNorm):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
         if isinstance(module, nn.Linear) and module.bias is not None:
@@ -385,10 +385,10 @@ class M3BERTModel(M3BERTInitModel):
     spec_input = torch.LongTensor(spec_frames)
     pos_enc = torch.LongTensor(position_encoding(seq_len=len(spec_frames)))
 
-    config = MockingjayConfig(hidden_size=768,
+    config = M3BERTConfig(hidden_size=768,
              num_hidden_layers=12, num_attention_heads=12, intermediate_size=3072)
 
-    model = MockingjayForMaskedLM(config)
+    model = M3BERTForMaskedLM(config)
     masked_spec_logits = model(spec_input, pos_enc)
     ```
     """
@@ -398,7 +398,7 @@ class M3BERTModel(M3BERTInitModel):
         self.input_representations = M3BERTInputRepresentations(config, input_dim)
         self.encoder = M3BERTEncoder(config, output_attentions=output_attentions,
                                            keep_multihead_output=keep_multihead_output)
-        self.apply(self.init_Mockingjay_weights)
+        self.apply(self.init_M3BERT_weights)
 
     def prune_heads(self, heads_to_prune):
         """ Prunes heads of the model.
@@ -461,9 +461,9 @@ class M3BERTModel(M3BERTInitModel):
         return encoded_layers
 
 
-class M3BERTForMaskedAcousticModel(MockingjayInitModel):
+class M3BERTForMaskedAcousticModel(M3BERTInitModel):
     """M3BERT model with the masked acoustic modeling head.
-    This module comprises the Mockingjay model followed by the masked acoustic modeling head.
+    This module comprises the M3BERT model followed by the masked acoustic modeling head.
 
     Params:
         `config`: a M3BERTConfig class instance with the configuration to build a new model
