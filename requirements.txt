@@ -10,8 +10,6 @@ torch==1.7.1
 torchaudio==0.7.2
 wget==3.2
 zipp==3.4.1
-tensorflow == 1.14.0   # CPU Version of TensorFlow.
-#tensorflow-gpu  == 1.14.0  # GPU version of TensorFlow.
 tqdm
 librosa >= 0.7.0
 speechpy
