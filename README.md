@@ -1,6 +1,11 @@
 # M3BERT
 A music transformer that extracts representations of audio using several hundreds of thousands of music clips. Fine-tuning is done with diverse end-tasks to enrich the pre-trained representations. More details can be found in the paper "Multi-modal, Multi-task, Music BERT: A Context-Aware Music Encoder Based on Transformers," accessible at https://www.researchgate.net/publication/363811441_Multi-modal_Multi-task_Music_BERT_A_Context-Aware_Music_Encoder_Based_on_Transformers
 
+## Requirements
+This package is built in pytorch. If training using a large amount of data, GPU capabilities is recommended. You can install the required packages with
+
+<code>pip install requirements.txt<\code>
+
 ## Data
 Data used to train the M3BERT model can be found at http://millionsongdataset.com/, https://sites. google.com/view/contact4music4all, https://github.com/MTG/mtg-jamendo-dataset, and https://github.com/mdeff/fma.
 
