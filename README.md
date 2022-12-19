@@ -4,7 +4,7 @@ A music transformer that extracts representations of audio using several hundred
 ## Requirements
 This package is built in pytorch. If training using a large amount of data, GPU capabilities is recommended. You can install the required packages with
 
-<code>pip install requirements.txt<\code>
+<code>pip install requirements.txt</code>
 
 ## Data
 Data used to train the M3BERT model can be found at http://millionsongdataset.com/, https://sites. google.com/view/contact4music4all, https://github.com/MTG/mtg-jamendo-dataset, and https://github.com/mdeff/fma.
