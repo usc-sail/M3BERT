@@ -11,14 +11,20 @@ Data used to train the M3BERT model can be found at http://millionsongdataset.co
 
 The datasets for fine-tuning M3BERT can be found at https://github.com/MTG/mtg-jamendo-dataset, http://anasynth.ircam.fr/home/media/ExtendedBallroom/, https://cvml.unige.ch/ databases/DEAM/, https://www.tensorflow.org/datasets/catalog/gtzan, and https://staff.aist.go.jp/m.goto/RWC-MDB/rwc-mdb-i.html.
 
-## Process
+Any data can be used, so long as you can save the data into numpy files and can point to these npy files in a csv.
 
-First, you will save your data into a csv file, where each csv has a column with the filename, length of file (should be less than 30s) and any labels. Once this csv is stored and the npy files are generated for your data (refer to paper for our feature extraction), you will want to create a config file that points to this csv. From there, you will be using the runner_m3bert.py file extensively, with different flags for pre-training and for fine-tuning.
+## General usage
+
+First, you will save your data into a csv file, where each csv has a column with the filename, length of file (should be less than 30s) and any file-level labels (genre, instrument, etc.). Once this csv is stored and the npy files are generated for your data (refer to paper for our feature extraction), you will want to create a config file that points to this csv. From there, you will be using the runner_m3bert.py file extensively, with different flags for pre-training and for fine-tuning.
 
 ## Pre-training and fine-tuning
 
 To pre-train the M3BERT model, you would typically run a command like:
-python runner_m3bert.py --train --config config/m3bert.yaml --logdir my_logdir
+python runner_m3bert.py --train --config config/my_config.yaml --logdir my_logdir
 
 To run the fine-tuning step, you may run something like:
 python runner_m3bert.py --train_mtl --config config/my_config.yaml --logdir my_logdir/ --ckpt mockingjay-500000.ckpt --ckpdir result/my_ckpt_dir/m3bert/ --frozen --dckpt my_dckpt
+
+Note that many times you can use the same config file for pre-training and for fine-tuning: the config file has separate sections to dictate hyperparameters for each part of the process.
+
+Tensorboard is highly recommended for evaluating training loss. The tensorboard will output masked, reconstructed, and original samples and gives you a good idea of how training loss is developing over time. Correlations between features can be calculated using outputs/corr_analysis.py.
