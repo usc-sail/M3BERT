@@ -1,11 +1,16 @@
 # M3BERT
 A music transformer that extracts representations of audio using several hundreds of thousands of music clips. Fine-tuning is done with diverse end-tasks to enrich the pre-trained representations. More details can be found in the paper "Multi-modal, Multi-task, Music BERT: A Context-Aware Music Encoder Based on Transformers," accessible at https://www.researchgate.net/publication/363811441_Multi-modal_Multi-task_Music_BERT_A_Context-Aware_Music_Encoder_Based_on_Transformers
 
+## Data
 Data used to train the M3BERT model can be found at http://millionsongdataset.com/, https://sites. google.com/view/contact4music4all, https://github.com/MTG/mtg-jamendo-dataset, and https://github.com/mdeff/fma.
 
 The datasets for fine-tuning M3BERT can be found at https://github.com/MTG/mtg-jamendo-dataset, http://anasynth.ircam.fr/home/media/ExtendedBallroom/, https://cvml.unige.ch/ databases/DEAM/, https://www.tensorflow.org/datasets/catalog/gtzan, and https://staff.aist.go.jp/m.goto/RWC-MDB/rwc-mdb-i.html.
 
+## Process
+
 First, you will save your data into a csv file, where each csv has a column with the filename, length of file (should be less than 30s) and any labels. Once this csv is stored and the npy files are generated for your data (refer to paper for our feature extraction), you will want to create a config file that points to this csv. From there, you will be using the runner_m3bert.py file extensively, with different flags for pre-training and for fine-tuning.
+
+## Pre-training and fine-tuning
 
 To pre-train the M3BERT model, you would typically run a command like:
 python runner_m3bert.py --train --config config/m3bert.yaml --logdir my_logdir
